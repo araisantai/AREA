@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # Install missing AREA V1 tools. Existing installations are preserved.
 set -euo pipefail
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-LOCAL_BIN="$SCRIPT_DIR/.tools/bin"
 CHECK_ONLY=0
 if [[ "${1:-}" == "--check" ]]; then
   CHECK_ONLY=1
@@ -12,10 +10,12 @@ elif [[ $# -ne 0 ]]; then
 fi
 
 find_tool() {
-  if [[ -x "$LOCAL_BIN/$1" ]]; then
-    printf '%s\n' "$LOCAL_BIN/$1"
+  if command -v "$1" >/dev/null 2>&1; then
+    command -v "$1"
+  elif [[ -x "$HOME/.local/bin/$1" ]]; then
+    printf '%s\n' "$HOME/.local/bin/$1"
   else
-    command -v "$1" 2>/dev/null || true
+    return 1
   fi
 }
 
@@ -61,10 +61,11 @@ install_dirsearch() {
     echo 'dirsearch needs Python 3.11+.' >&2
     return 1
   fi
-  python3 -m venv "$SCRIPT_DIR/.tools/dirsearch-venv"
-  "$SCRIPT_DIR/.tools/dirsearch-venv/bin/python" -m pip install 'git+https://github.com/maurosoria/dirsearch.git'
-  mkdir -p "$LOCAL_BIN"
-  ln -sf ../dirsearch-venv/bin/dirsearch "$LOCAL_BIN/dirsearch"
+  if ! command -v pipx >/dev/null 2>&1; then
+    install_package pipx
+  fi
+  pipx install 'git+https://github.com/maurosoria/dirsearch.git'
+  echo 'dirsearch is available at ~/.local/bin/dirsearch; generated scripts find that path automatically.'
 }
 
 missing=()
